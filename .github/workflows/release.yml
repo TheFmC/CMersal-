@@ -1,0 +1,26 @@
+# Every time a new version is published (latest.json changes), create a GitHub Release for it with the APK attached.
+name: Publish release
+on:
+  push:
+    branches: [main]
+    paths: [latest.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release for the version in latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version latest.json)
+          apk=$(jq -r .apk latest.json)
+          jq -r .notes latest.json > notes.md
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists"; exit 0
+          fi
+          cp "$apk" "Mersal-$version.apk"
+          gh release create "v$version" "Mersal-$version.apk" --title "مرسال $version" --notes-file notes.md --latest
